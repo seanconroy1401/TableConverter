@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace Tutorial1
 {
@@ -21,7 +22,7 @@ namespace Tutorial1
 
         }
 
-        public Table(int numCols, int numRows)
+        public Table(int numRows, int numCols)
         {
             this.numRows = numRows;
             this.numCols = numCols;
@@ -121,15 +122,16 @@ namespace Tutorial1
                 Console.WriteLine(individualParts[i]);
             }
 
-            string path = @"C:\temp\l.csv";
-            Table myTable = csvToTable(path);
+            string p = @"C:\temp\l.csv";
+            Table t = csvToTable(p);
 
-            for (int i = 0; i < myTable.getNumRows(); i++)
+            for (int i = 0; i < t.getNumRows(); i++)
             {
-                for (int j = 0; j < myTable.getNumCols(); j++)
+                for (int j = 0; j < t.getNumCols(); j++)
                 {
-                    Console.WriteLine(myTable.getValue(i,j));
+                    Console.Write(t.getValue(i,j) + " ");
                 }
+                Console.WriteLine();
             }*/
 
             string originalFilePath = "";
@@ -166,9 +168,9 @@ namespace Tutorial1
 
             Table myTable = new Table();
 
-            string [] originalFileTypeCheck = originalFilePath.Split('.');
+            string [] originalFileTypeCheck = originalFilePath.Split('.'); //This code is just to get the filename extension
             string originalFileType = originalFileTypeCheck[originalFileTypeCheck.Length - 1];
-            originalFileType = originalFileType.ToLower();
+            originalFileType = originalFileType.ToLower(); //ensures the file extension is lowercase
 
             switch (originalFileType) {
                 case "csv" : myTable = csvToTable(originalFilePath); // working
@@ -245,12 +247,30 @@ namespace Tutorial1
             return true;
         }
 
+        //This is based off a a method I found here: https://stackoverflow.com/questions/6750116/how-to-eliminate-all-line-breaks-in-string
+        //This fixes the issue I had where random line breaks were being inserted in my string builder for csv and I couldn't get rid of them
+        static string removeLineEndings(string input) {
+
+            string lineSeparatorChar = ((char)0x2028).ToString();
+            string paragraphSeparatorChar = ((char)0x2029).ToString();
+
+            return input.Replace("\r\n", string.Empty)
+                        .Replace("\n", string.Empty)
+                        .Replace("\r", string.Empty)
+                        .Replace(lineSeparatorChar, string.Empty)
+                        .Replace(paragraphSeparatorChar, string.Empty);
+
+        }
+
         static void tableToCSV(string path, Table input) {
 
             String output = "";
+            String row = "";
 
             int rows = input.getNumRows();
             int cols = input.getNumCols();
+
+            StringBuilder sb = new StringBuilder();
 
             for (int i = 0; i < rows; i++) {
 
@@ -259,40 +279,60 @@ namespace Tutorial1
                     if ( (j == cols-1) ) {
 
                         if (onlyDigits(input.getValue(i, j))) {
-                            Console.WriteLine(input.getValue(i,j));
-                            output = output + input.getValue(i, j);
+                            //Console.WriteLine(input.getValue(i,j));
+                            row = row + input.getValue(i, j);
+                            //sb.Append(input.getValue(i, j));
                         }
                         else {
-                            Console.WriteLine(input.getValue(i, j));
+                            //Console.WriteLine(input.getValue(i, j));
                             string concat = String.Concat("\"", input.getValue(i, j).TrimEnd('\n','\r'), "\"");
                             concat = concat.Replace(Environment.NewLine, "");
-                            output = output + concat;
+                            row = row + concat;
+                            //sb.Append("\"");
+                            ////sb.Append(input.getValue(i, j));
+                            //sb.Append("\"");
                         }
 
                     }
                     else {
 
                         if (onlyDigits(input.getValue(i, j))) {
-                            Console.WriteLine(input.getValue(i, j));
-                            //string concat = String.Concat("\"",input.getValue(i,j),"\" ",",");
-                            output = output + input.getValue(i, j) + ",";
+                            //Console.WriteLine(input.getValue(i, j));
+                            string concat = String.Concat("\"",input.getValue(i,j),"\" ",",");
+                            row = row + input.getValue(i, j) + ",";
+                            //sb.Append(input.getValue(i, j));
+                            //sb.Append(",");
                         }
                         else {
-                            Console.WriteLine(input.getValue(i, j));
+                            //Console.WriteLine(input.getValue(i, j));
                             string concat = String.Concat("\"", input.getValue(i, j), "\"", ",").TrimEnd('\r', '\n');
                             //Console.WriteLine(concat);
-                            output = output + concat;
+                            row = row + concat;
+                            /*sb.Append("\"");
+                            sb.Append(input.getValue(i, j));
+                            sb.Append("\"");
+                            sb.Append(",");*/
                         }
 
                     }
 
+                    row = removeLineEndings(row);
+
                 }
 
-                //output = output + "\n";
+                output = output + row;
+                row = "";
+
+                if (i != rows-1) {
+                    output = output + "\n";
+                }
 
             }
 
-            Console.WriteLine(output);
+
+            //output = sb.ToString();
+            //output = removeLineEndings(output);
+            //Console.WriteLine(output);
 
             using (StreamWriter sw = File.CreateText(path)) {
                 sw.WriteLine(output);
