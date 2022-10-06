@@ -7,6 +7,8 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Text.Json;
+using HtmlAgilityPack;
 
 namespace Tutorial1
 {
@@ -67,11 +69,31 @@ namespace Tutorial1
 
         }
 
+        public void setValue(int i, int j, String s) {
+
+            myTable[i,j] = s;
+
+        }
 
     }
 
     class Program
     {
+
+        static void tablePrinter(Table input) {
+
+            Console.WriteLine();
+
+            for (int i = 0; i < input.getNumRows(); i++) {
+                for (int j = 0; j < input.getNumCols(); j++) {
+                    Console.Write(input.getValue(i, j));
+                    Console.Write(" ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine();
+        }
 
         static void Main(string[] args)
         {
@@ -134,6 +156,11 @@ namespace Tutorial1
                 Console.WriteLine();
             }*/
 
+            /*string p = @"C:\temp\j.json";
+            Table t = jsonToTable(p);
+            tableToJSON("s", t);
+            tablePrinter(t);*/
+
             string originalFilePath = "";
             string newFilePath = "";
 
@@ -175,6 +202,8 @@ namespace Tutorial1
             switch (originalFileType) {
                 case "csv" : myTable = csvToTable(originalFilePath); // working
                 break;
+                case "json" : myTable = jsonToTable(originalFilePath);
+                break;
             }
 
             string[] newFileTypeCheck = newFilePath.Split('.');
@@ -184,7 +213,10 @@ namespace Tutorial1
             switch (newFileType)
             {
                 case "csv":
-                    tableToCSV(newFilePath, myTable); //bugged
+                    tableToCSV(newFilePath, myTable); //fixed
+                    break;
+                case "json":
+                    tableToJSON(newFilePath, myTable);
                     break;
             }
 
@@ -226,15 +258,120 @@ namespace Tutorial1
             return myTable;
         }
 
-        static Table mdToTable()
+        static bool containsNoText(string input) {
+
+            foreach (char c in input) {
+                //checks if there is text or digits in the string using chars
+                if ( c >= 'a' || c <= 'z' || c >= 'A' || c <= 'Z' || c >= '0' || c <= '9' ) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        static Table mdToTable(string path)
         {
+
+            string wholeFile = "";
+
+            if (File.Exists(path))
+            {
+                wholeFile = File.ReadAllText(path);
+            }
+            else
+            {
+                Console.WriteLine("Error: No such file");
+            }
+
+            string[] rows = wholeFile.Split('\n'); //Split the string by new line in order to split it into an array of rows
+            int numRows = rows.Length - 2; //Which allows you to determine the number of rows
+            string[] cols = rows[0].Split('|'); //split one of the rows in order to determine the number of columns
+            int numCols = cols.Length - 2;
+
+            Console.WriteLine("numrows : {0}, numcols : {1}",numRows, numCols);
+            /*for (int i = 0; i < cols.Length; i++) {
+                Console.WriteLine(cols[i]);
+                if (containsNoText(cols[i])) {
+                    Console.WriteLine("Found one!");
+                }
+            }*/
+
             Table myTable = new Table(0, 0);
             return myTable;
         }
 
-        static Table jsonToTable()
+        static Table jsonToTable(string path)
         {
-            Table myTable = new Table(0, 0);
+
+            string data = "";
+
+            if (File.Exists(path))
+            {
+                data = File.ReadAllText(path);
+            }
+            else
+            {
+                Console.WriteLine("Error: No such file");
+            }
+
+            using JsonDocument docJSON = JsonDocument.Parse(data); //Taken from the code provided by John Keating
+            JsonElement rootJSON = docJSON.RootElement;
+
+            int propertiesCounter = 0;
+            var enumerator = rootJSON.EnumerateArray(); //Use this to find the number of properties. This is a modified version of a code snippet I found at https://stackoverflow.com/questions/60838935/get-property-name-from-json
+            while (enumerator.MoveNext())
+            {
+                var propertyEnumerator = enumerator.Current.EnumerateObject();
+                while (propertyEnumerator.MoveNext())
+                {
+                    propertiesCounter++;
+                }
+
+                break; //Only need to enumerate through the first object as the properties appear in all objects
+
+            }
+
+            string [] propertyNames = new string[propertiesCounter];
+            int tempCounter = 0;
+
+            while (enumerator.MoveNext()) //enumerate again, this time to fill the array with the names of the properties
+            {
+                var propertyEnumerator = enumerator.Current.EnumerateObject();
+                while (propertyEnumerator.MoveNext())
+                {
+                    propertyNames[tempCounter] = propertyEnumerator.Current.Name;
+                    tempCounter++;
+                }
+
+                break; //Only need to enumerate through one object as the same properties appear in all objects
+
+            }
+
+            int numCols = propertiesCounter;
+            int numRows = rootJSON.GetArrayLength() + 1;
+
+            Table myTable = new Table(numRows, numCols);
+
+            for (int i = 0; i < numCols; i++) { //iterate through the first row in the table to set the headers
+                myTable.setValue(0, i, propertyNames[i]);
+            }
+
+
+            for (int i = 1; i < numRows; i++) { //iterate through every other spot in the table to fill in the values
+
+                var currentRow = rootJSON[i-1];
+
+                for (int j = 0; j < numCols; j++) {
+
+                    string currentProperty = propertyNames[j];
+                    //Console.WriteLine(currentRow.GetProperty(currentProperty).ToString());
+                    myTable.setValue(i, j, currentRow.GetProperty(currentProperty).ToString());
+
+                }
+
+            }
+
             return myTable;
         }
 
@@ -335,6 +472,67 @@ namespace Tutorial1
             //Console.WriteLine(output);
 
             using (StreamWriter sw = File.CreateText(path)) {
+                sw.WriteLine(output);
+            }
+
+        }
+
+        static string [] getHeadings(Table input) { //returns an array of the headings from a given table
+
+            string [] output = new string[input.getNumCols()];
+
+            for (int i = 0; i < input.getNumCols(); i++) {
+                output[i] = input.getValue(0, i);
+            }
+
+            return output;
+
+        }
+
+        static void tableToJSON(string path, Table input) {
+
+            string [] headings = getHeadings(input);
+
+            string output = "[ \n";
+
+            for (int i = 1; i < input.getNumRows(); i++) { //iterate through the table and build the string to be written to the json file
+
+                output = output + @"{ " + "\n";
+
+                for (int j = 0; j < input.getNumCols(); j++) {
+                    if (j != input.getNumCols()-1) { //if its not the last row, make sure it ends in a comma
+                        if (onlyDigits(input.getValue(i, j))) { //if its only digits don't put it in inverted commas
+                            output = output + "\"" + headings[j] + "\" : " + input.getValue(i, j) + ", \n";
+                        }
+                        else {
+                            output = output + "\"" + headings[j] + "\" : \"" + input.getValue(i, j) + "\", \n";
+                        }
+                    }
+                    else {
+                        if (onlyDigits(input.getValue(i, j)))
+                        {
+                            output = output + "\"" + headings[j] + "\" : " + input.getValue(i, j) + " \n";
+                        }
+                        else
+                        {
+                            output = output + "\"" + headings[j] + "\" : \"" + input.getValue(i, j) + "\" \n";
+                        }
+                    }
+                }
+
+                if (i != input.getNumRows()-1) {
+                    output = output + @"}," + "\n";
+                }
+                else {
+                    output = output + @"}" + "\n";
+                }
+
+            }
+
+            output = output + "]";
+
+            using (StreamWriter sw = File.CreateText(path))
+            {
                 sw.WriteLine(output);
             }
 

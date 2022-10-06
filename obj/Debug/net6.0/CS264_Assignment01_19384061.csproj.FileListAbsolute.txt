@@ -13,3 +13,5 @@ C:\Users\spymo\OneDrive\Desktop\Third Year Comp Sci\CS264\CS264_Assignment01_193
 C:\Users\spymo\OneDrive\Desktop\Third Year Comp Sci\CS264\CS264_Assignment01_19384061\obj\Debug\net6.0\CS264_Assignment01_19384061.pdb
 C:\Users\spymo\OneDrive\Desktop\Third Year Comp Sci\CS264\CS264_Assignment01_19384061\obj\Debug\net6.0\CS264_Assignment01_19384061.genruntimeconfig.cache
 C:\Users\spymo\OneDrive\Desktop\Third Year Comp Sci\CS264\CS264_Assignment01_19384061\obj\Debug\net6.0\ref\CS264_Assignment01_19384061.dll
+C:\Users\spymo\OneDrive\Desktop\Third Year Comp Sci\CS264\CS264_Assignment01_19384061\bin\Debug\net6.0\HtmlAgilityPack.dll
+C:\Users\spymo\OneDrive\Desktop\Third Year Comp Sci\CS264\CS264_Assignment01_19384061\obj\Debug\net6.0\CS264_Assignment01_19384061.csproj.CopyComplete
