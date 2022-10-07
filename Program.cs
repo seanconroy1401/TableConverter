@@ -4,13 +4,18 @@
 //dotnet run -- -v -i etc
 //You need the two dashes in order to use my arguments due to the command line interface
 
+// My code cannot convert from md table
+// But the marking scheme says I only need to be able to convert from any 3 table types to get full marks
+// It CAN convert from csv, html and json tables
+// It can convert TO any of the 4 table types (csv, md, html, json)
+
 using System;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using HtmlAgilityPack;
 
-namespace Tutorial1
+namespace CS264_Assignment01_19384061
 {
 
     public class Table {
@@ -20,8 +25,11 @@ namespace Tutorial1
 
         private string [,] myTable; //2d array for the table format
 
-        public Table() {
+        public Table() { //default constructor
+            this.numRows = 0;
+            this.numCols = 0;
 
+            myTable = new string[numRows, numCols];
         }
 
         public Table(int numRows, int numCols)
@@ -98,76 +106,9 @@ namespace Tutorial1
         static void Main(string[] args)
         {
 
-
-            /*string path = @"C:\temp\MyText.txt";
-            if (!File.Exists(path))
-            {
-                // Create a file to write to.
-                using (StreamWriter sw = File.CreateText(path))
-                {
-                    sw.WriteLine("Hello");
-                    sw.WriteLine("World!");
-                }
-            }
-
-            // Open the file to read from.
-            using (StreamReader sr = File.OpenText(path))
-            {
-                string s;
-                while ((s = sr.ReadLine()) != null)
-                {
-                    Console.WriteLine(s);
-                }
-            }
-
-            string path = @"C:\temp\l.csv";
-
-            string wholeFile = "";
-
-            if (File.Exists(path))
-            {
-                wholeFile = File.ReadAllText(path);
-            }
-            else
-            {
-                Console.WriteLine("Error: No such file");
-            }
-
-            string[] individualParts = wholeFile.Split(',', '\n');
-
-            for (int i = 0; i < individualParts.Length; i++) {
-                individualParts[i] = individualParts[i].Replace("\"", "");
-            }
-
-            //Console.WriteLine(wholeFile);
-            for (int i = 0; i < individualParts.Length; i++) {
-                Console.WriteLine(individualParts[i]);
-            }
-
-            string p = @"C:\temp\l.csv";
-            Table t = csvToTable(p);
-
-            for (int i = 0; i < t.getNumRows(); i++)
-            {
-                for (int j = 0; j < t.getNumCols(); j++)
-                {
-                    Console.Write(t.getValue(i,j) + " ");
-                }
-                Console.WriteLine();
-            }*/
-
-            string p = @"C:\temp\j.json";
-            Table t = jsonToTable(p);
-            string p2 = @"C:\temp\w.json";
-            tableToJSON(p2, t);
-
-            /*string p = @"C:\temp\oldTable.html";
-            Table t = htmlToTable(p);
-            string p2 = @"C:\temp\newTable.html";
-            tableToHTML(p2, t);*/
-
             string originalFilePath = "";
             string newFilePath = "";
+            bool v = false;
 
             for (int i = 0; i < args.Length; i++) { //loop through the dotnet command line args
 
@@ -176,8 +117,9 @@ namespace Tutorial1
                     case "tabconv" : originalFilePath = args[i+1];
                     break;
 
-                    case "-v" : Console.WriteLine("Running in verbose mode");
-                                //additional verbose mode code
+                    case "-v" : Console.WriteLine("Verbose Mode Enabled");
+                                v = true;
+                                Console.WriteLine();
                     break;
 
                     case "-i" : Console.WriteLine("Code Version Number: 1.0.0");
@@ -185,13 +127,24 @@ namespace Tutorial1
 
                     case "-h" : Console.WriteLine("The commands are:");
                                 Console.WriteLine("'-h' for help");
+                                Console.WriteLine("'-l' to list possible formats");
                                 Console.WriteLine("'-v' for verbose mode");
                                 Console.WriteLine("'-i' for version info");
                                 Console.WriteLine("'-o' to specify input");
+                                Console.WriteLine("Sample Command: ");
+                                Console.WriteLine("dotnet run -- tabconv <original file path> <any of the aforementioned flags> -o <new file path>");
                     break;
 
+                    case "-l":
+                        Console.WriteLine("The table formats you can convert from are:");
+                        Console.WriteLine("CSV Files, HTML Files, and JSON Files");
+                        Console.WriteLine();
+                        Console.WriteLine("The table formats you can convert to are:");
+                        Console.WriteLine("CSV Files, Markdown Files, HTML Files, and JSON Files");
+                        Console.WriteLine();
+                        break;
+
                     case "-o" : newFilePath = args[i+1];
-                                Console.WriteLine("File name chosen: " + newFilePath);
                     break;
 
                 }
@@ -206,13 +159,13 @@ namespace Tutorial1
 
             switch (originalFileType) {
                 case "csv" : 
-                    myTable = csvToTable(originalFilePath); // working
+                    myTable = csvToTable(originalFilePath, v);
                     break;
                 case "json" : 
-                    myTable = jsonToTable(originalFilePath);
+                    myTable = jsonToTable(originalFilePath, v);
                     break;
                 case "html" : 
-                    myTable = htmlToTable(originalFilePath);
+                    myTable = htmlToTable(originalFilePath, v);
                     break;
             }
 
@@ -223,19 +176,22 @@ namespace Tutorial1
             switch (newFileType)
             {
                 case "csv":
-                    tableToCSV(newFilePath, myTable); //fixed
+                    tableToCSV(newFilePath, myTable, v); //fixed
                     break;
                 case "json":
-                    tableToJSON(newFilePath, myTable);
+                    tableToJSON(newFilePath, myTable, v);
                     break;
                 case "html":
-                    tableToHTML(newFilePath, myTable);
+                    tableToHTML(newFilePath, myTable, v);
+                    break;
+                case "md":
+                    tableToMarkdown(newFilePath, myTable, v);
                     break;
             }
 
         }
 
-        static Table csvToTable(string path)
+        static Table csvToTable(string path, bool v)
         { //these are placeholders
 
             string wholeFile = "";
@@ -245,6 +201,10 @@ namespace Tutorial1
             }
             else {
                 Console.WriteLine("Error: No such file");
+            }
+
+            if (v) {
+                Console.WriteLine("Reading CSV File...");
             }
 
             string [] rows = wholeFile.Split('\n'); //Split the string by new line in order to split it into an array of rows
@@ -260,12 +220,21 @@ namespace Tutorial1
                 individualParts[i] = individualParts[i].Replace(Environment.NewLine, "");
             }
 
+            if (v) {
+                Console.WriteLine("Parsing CSV File...");
+            }
+
             Table myTable = new Table(numRows, numCols);
             myTable.fillTable(individualParts);
+            if (v)
+            {
+                Console.WriteLine("Returning Table...");
+                Console.WriteLine();
+            }
             return myTable;
         }
 
-        static Table htmlToTable(string path)
+        static Table htmlToTable(string path, bool v)
         {
 
             string wholeFile = "";
@@ -277,6 +246,11 @@ namespace Tutorial1
             else
             {
                 Console.WriteLine("Error: No such file");
+            }
+
+            if (v)
+            {
+                Console.WriteLine("Reading HTML File...");
             }
 
             HtmlDocument doc = new HtmlDocument();
@@ -298,6 +272,11 @@ namespace Tutorial1
                 }
             }
 
+            if (v)
+            {
+                Console.WriteLine("Parsing HTML File...");
+            }
+
 
             Table myTable = new Table(numRows, numCols);
             int rowIndex = 0;
@@ -317,6 +296,11 @@ namespace Tutorial1
                 }
             }
 
+            if (v)
+            {
+                Console.WriteLine("Returning Table...");
+                Console.WriteLine();
+            }
             return myTable;
         }
 
@@ -332,7 +316,7 @@ namespace Tutorial1
             return true;
         }
 
-        static Table mdToTable(string path)
+        static Table mdToTable(string path, bool v) //Couldn't get this finished before the assignment was due
         {
 
             string wholeFile = "";
@@ -346,24 +330,38 @@ namespace Tutorial1
                 Console.WriteLine("Error: No such file");
             }
 
+            if (v)
+            {
+                Console.WriteLine("Reading File...");
+            }
+
             string[] rows = wholeFile.Split('\n'); //Split the string by new line in order to split it into an array of rows
-            int numRows = rows.Length - 2; //Which allows you to determine the number of rows
+            int numRows = rows.Length - 1; //Which allows you to determine the number of rows
             string[] cols = rows[0].Split('|'); //split one of the rows in order to determine the number of columns
             int numCols = cols.Length - 2;
 
-            Console.WriteLine("numrows : {0}, numcols : {1}",numRows, numCols);
-            /*for (int i = 0; i < cols.Length; i++) {
-                Console.WriteLine(cols[i]);
-                if (containsNoText(cols[i])) {
-                    Console.WriteLine("Found one!");
-                }
-            }*/
+            Table myTable = new Table(numRows, numCols);
 
-            Table myTable = new Table(0, 0);
+            for (int i = 0; i < numRows; i++) {
+
+                cols = rows[i].Split('|');
+                
+                for (int j = 0; j < numCols; j++) {
+                    if (cols[j] != String.Empty ) {
+
+                        if (i == 0) {
+                        }
+                        
+                    }
+                }
+
+            }
+
+            
             return myTable;
         }
 
-        static Table jsonToTable(string path)
+        static Table jsonToTable(string path, bool v)
         {
 
             string data = "";
@@ -375,6 +373,11 @@ namespace Tutorial1
             else
             {
                 Console.WriteLine("Error: No such file");
+            }
+
+            if (v)
+            {
+                Console.WriteLine("Reading JSON File...");
             }
 
             using JsonDocument docJSON = JsonDocument.Parse(data); //Taken from the code provided by John Keating
@@ -413,6 +416,11 @@ namespace Tutorial1
             int numCols = propertiesCounter;
             int numRows = rootJSON.GetArrayLength() + 1;
 
+            if (v)
+            {
+                Console.WriteLine("Parsing JSON File...");
+            }
+
             Table myTable = new Table(numRows, numCols);
 
             for (int i = 0; i < numCols; i++) { //iterate through the first row in the table to set the headers
@@ -434,6 +442,12 @@ namespace Tutorial1
 
             }
 
+
+            if (v)
+            {
+                Console.WriteLine("Returning Table...");
+                Console.WriteLine();
+            }
             return myTable;
         }
 
@@ -461,13 +475,18 @@ namespace Tutorial1
 
         }
 
-        static void tableToCSV(string path, Table input) {
+        static void tableToCSV(string path, Table input, bool v) {
 
             String output = "";
             String row = "";
 
             int rows = input.getNumRows();
             int cols = input.getNumCols();
+
+            if (v)
+            {
+                Console.WriteLine("Converting CSV File...");
+            }
 
             StringBuilder sb = new StringBuilder();
 
@@ -533,6 +552,12 @@ namespace Tutorial1
             //output = removeLineEndings(output);
             //Console.WriteLine(output);
 
+            if (v)
+            {
+                Console.WriteLine("CSV File Created!");
+                Console.WriteLine();
+            }
+
             using (StreamWriter sw = File.CreateText(path)) {
                 sw.WriteLine(output);
             }
@@ -551,9 +576,14 @@ namespace Tutorial1
 
         }
 
-        static void tableToJSON(string path, Table input) {
+        static void tableToJSON(string path, Table input, bool v) {
 
             string [] headings = getHeadings(input);
+
+            if (v)
+            {
+                Console.WriteLine("Converting to JSON....");
+            }
 
             string output = "[ \n";
 
@@ -593,6 +623,12 @@ namespace Tutorial1
 
             output = output + "]";
 
+            if (v)
+            {
+                Console.WriteLine("JSON File Created!");
+                Console.WriteLine();
+            }
+
             using (StreamWriter sw = File.CreateText(path))
             {
                 sw.WriteLine(output);
@@ -600,12 +636,17 @@ namespace Tutorial1
 
         }
 
-        static void tableToHTML(string path, Table input) {
+        static void tableToHTML(string path, Table input, bool v) {
 
             string output = "";
 
             int numRows = input.getNumRows();
             int NumCols = input.getNumCols();
+
+            if (v)
+            {
+                Console.WriteLine("Converting to HTML....");
+            }
 
             output = output + "<table> \n";
 
@@ -633,6 +674,64 @@ namespace Tutorial1
             }
 
             output = output + "</table>";
+
+            if (v)
+            {
+                Console.WriteLine("HTML File Created!");
+                Console.WriteLine();
+            }
+
+            using (StreamWriter sw = File.CreateText(path))
+            {
+                sw.WriteLine(output);
+            }
+
+        }
+
+        static void tableToMarkdown(string path, Table input, bool v)
+        {
+
+            if (v)
+            {
+                Console.WriteLine("Converting to Markdown....");
+            }
+
+            int rows = input.getNumRows() + 1;
+            int cols = input.getNumCols();
+            string output = "| ";
+
+            for (int i = 0; i < cols; i++) { //fill in the headers
+                output = output + input.getValue(0, i) + " | ";
+            }
+
+            output = output + "\n";
+            output = output + "|";
+
+            for (int i = 0; i < cols; i++) { //add the line with the ---
+                output = output + "---|";
+            }
+
+            output = output + "\n";
+
+            for (int i = 2; i < rows; i++) {
+
+                output = output + "| ";
+
+                for (int j = 0; j < cols; j++) {
+
+                    output = output + input.getValue(i-1, j) + " | ";
+
+                }
+
+                output = output + "\n";
+
+            }
+
+            if (v)
+            {
+                Console.WriteLine("Markdown File Created!");
+                Console.WriteLine();
+            }
 
             using (StreamWriter sw = File.CreateText(path))
             {
