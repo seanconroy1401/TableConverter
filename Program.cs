@@ -156,10 +156,15 @@ namespace Tutorial1
                 Console.WriteLine();
             }*/
 
-            /*string p = @"C:\temp\j.json";
+            string p = @"C:\temp\j.json";
             Table t = jsonToTable(p);
-            tableToJSON("s", t);
-            tablePrinter(t);*/
+            string p2 = @"C:\temp\w.json";
+            tableToJSON(p2, t);
+
+            /*string p = @"C:\temp\oldTable.html";
+            Table t = htmlToTable(p);
+            string p2 = @"C:\temp\newTable.html";
+            tableToHTML(p2, t);*/
 
             string originalFilePath = "";
             string newFilePath = "";
@@ -200,10 +205,15 @@ namespace Tutorial1
             originalFileType = originalFileType.ToLower(); //ensures the file extension is lowercase
 
             switch (originalFileType) {
-                case "csv" : myTable = csvToTable(originalFilePath); // working
-                break;
-                case "json" : myTable = jsonToTable(originalFilePath);
-                break;
+                case "csv" : 
+                    myTable = csvToTable(originalFilePath); // working
+                    break;
+                case "json" : 
+                    myTable = jsonToTable(originalFilePath);
+                    break;
+                case "html" : 
+                    myTable = htmlToTable(originalFilePath);
+                    break;
             }
 
             string[] newFileTypeCheck = newFilePath.Split('.');
@@ -217,6 +227,9 @@ namespace Tutorial1
                     break;
                 case "json":
                     tableToJSON(newFilePath, myTable);
+                    break;
+                case "html":
+                    tableToHTML(newFilePath, myTable);
                     break;
             }
 
@@ -252,9 +265,58 @@ namespace Tutorial1
             return myTable;
         }
 
-        static Table htmlToTable()
+        static Table htmlToTable(string path)
         {
-            Table myTable = new Table(0, 0);
+
+            string wholeFile = "";
+
+            if (File.Exists(path))
+            {
+                wholeFile = File.ReadAllText(path);
+            }
+            else
+            {
+                Console.WriteLine("Error: No such file");
+            }
+
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(wholeFile);
+
+            int numRows = 0;
+            int numCols = 0;
+
+            foreach (HtmlNode table in doc.DocumentNode.SelectNodes("//table")) //Taken from code provided by John Keating and modified to count the numRows and numCols
+            {
+                foreach (HtmlNode row in table.SelectNodes("tr"))
+                {
+                    numCols = 0;
+                    foreach (HtmlNode cell in row.SelectNodes("td|th"))
+                    {
+                        numCols++;
+                    }
+                    numRows++;
+                }
+            }
+
+
+            Table myTable = new Table(numRows, numCols);
+            int rowIndex = 0;
+            int colIndex = 0;
+
+            foreach (HtmlNode table in doc.DocumentNode.SelectNodes("//table")) //Taken from code provided by John Keating and modified to fill my table object
+            {
+                foreach (HtmlNode row in table.SelectNodes("tr"))
+                {
+                    colIndex = 0;
+                    foreach (HtmlNode cell in row.SelectNodes("td|th"))
+                    {
+                        myTable.setValue(rowIndex, colIndex, cell.InnerHtml);
+                        colIndex++;
+                    }
+                    rowIndex++;
+                }
+            }
+
             return myTable;
         }
 
@@ -497,34 +559,34 @@ namespace Tutorial1
 
             for (int i = 1; i < input.getNumRows(); i++) { //iterate through the table and build the string to be written to the json file
 
-                output = output + @"{ " + "\n";
+                output = output + @"	{ " + "\n";
 
                 for (int j = 0; j < input.getNumCols(); j++) {
                     if (j != input.getNumCols()-1) { //if its not the last row, make sure it ends in a comma
                         if (onlyDigits(input.getValue(i, j))) { //if its only digits don't put it in inverted commas
-                            output = output + "\"" + headings[j] + "\" : " + input.getValue(i, j) + ", \n";
+                            output = output + "		\"" + headings[j] + "\" : " + input.getValue(i, j) + ", \n";
                         }
                         else {
-                            output = output + "\"" + headings[j] + "\" : \"" + input.getValue(i, j) + "\", \n";
+                            output = output + "		\"" + headings[j] + "\" : \"" + input.getValue(i, j) + "\", \n";
                         }
                     }
                     else {
                         if (onlyDigits(input.getValue(i, j)))
                         {
-                            output = output + "\"" + headings[j] + "\" : " + input.getValue(i, j) + " \n";
+                            output = output + "		\"" + headings[j] + "\" : " + input.getValue(i, j) + " \n";
                         }
                         else
                         {
-                            output = output + "\"" + headings[j] + "\" : \"" + input.getValue(i, j) + "\" \n";
+                            output = output + "		\"" + headings[j] + "\" : \"" + input.getValue(i, j) + "\" \n";
                         }
                     }
                 }
 
                 if (i != input.getNumRows()-1) {
-                    output = output + @"}," + "\n";
+                    output = output + @"	}," + "\n";
                 }
                 else {
-                    output = output + @"}" + "\n";
+                    output = output + @"	}" + "\n";
                 }
 
             }
@@ -537,5 +599,47 @@ namespace Tutorial1
             }
 
         }
+
+        static void tableToHTML(string path, Table input) {
+
+            string output = "";
+
+            int numRows = input.getNumRows();
+            int NumCols = input.getNumCols();
+
+            output = output + "<table> \n";
+
+            for (int i = 0; i < numRows; i++) {
+
+                output = output + "    <tr> \n";
+
+                for (int j = 0; j < NumCols; j++) {
+
+                    if (i == 0) {
+
+                        output = output + "        <th>" + input.getValue(i, j) + "</th> \n";
+
+                    }
+                    else {
+
+                        output = output + "        <td>" + input.getValue(i, j) + "</td> \n";
+
+                    }
+
+                }
+
+                output = output + "    </tr> \n";
+
+            }
+
+            output = output + "</table>";
+
+            using (StreamWriter sw = File.CreateText(path))
+            {
+                sw.WriteLine(output);
+            }
+
+        }
+
     }
 }
